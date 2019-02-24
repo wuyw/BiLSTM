@@ -1,0 +1,6 @@
+data/*
+runs/*
+vocabs/*
+.idea/*
+__pycache__/
+.DS_Store
