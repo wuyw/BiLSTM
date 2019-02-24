@@ -43,103 +43,104 @@ def train(config):
         with tf.Session(config=sess_config) as sess:
             rnn = TextRnn(config)
 
-        # training procedure
-        global_step = tf.Variable(0, name='global_step', trainable=False)
-        optimizer = tf.train.AdamOptimizer(config['learning_rate'])
-        grads_and_vars = optimizer.compute_gradients(rnn.loss)
-        train_op = optimizer.apply_gradients(grads_and_vars, global_step=global_step)
+            # training procedure
+            global_step = tf.Variable(0, name='global_step', trainable=False)
+            optimizer = tf.train.AdamOptimizer(config['learning_rate'])
+            grads_and_vars = optimizer.compute_gradients(rnn.loss)
+            train_op = optimizer.apply_gradients(grads_and_vars, global_step=global_step)
 
-        # keep track of gradient values and sparsity
-        grad_summaries = []
-        for g, v in grads_and_vars:
-            if g is not None:
-                grad_hist_summary = tf.summary.histogram('{}/grad/hist'.format(v.name), g)
-                sparsity_summary = tf.summary.scalar('{}/grad/sparsity'.format(v.name), tf.nn.zero_fraction(g))
-                grad_summaries.append(grad_hist_summary)
-                grad_summaries.append(sparsity_summary)
-        grad_summaries_merged = tf.summary.merge(grad_summaries)
+            # keep track of gradient values and sparsity
+            grad_summaries = []
+            for g, v in grads_and_vars:
+                if g is not None:
+                    grad_hist_summary = tf.summary.histogram('{}/grad/hist'.format(v.name), g)
+                    sparsity_summary = tf.summary.scalar('{}/grad/sparsity'.format(v.name), tf.nn.zero_fraction(g))
+                    grad_summaries.append(grad_hist_summary)
+                    grad_summaries.append(sparsity_summary)
+            grad_summaries_merged = tf.summary.merge(grad_summaries)
 
-        # output dir for models and summaries
-        timestamp = str(int(time.time()))
-        outdir = os.path.abspath(os.path.join(os.path.curdir, 'runs', timestamp))
-        print('writing to {}'.format(outdir))
+            # output dir for models and summaries
+            timestamp = str(int(time.time()))
+            outdir = os.path.abspath(os.path.join(os.path.curdir, 'runs', timestamp))
+            print('writing to {}'.format(outdir))
 
-        # summary for loss and accuracy
-        loss_summary = tf.summary.scalar('loss', rnn.loss)
-        acc_summary = tf.summary.scalar('accuracy', rnn.accuracy)
+            # summary for loss and accuracy
+            loss_summary = tf.summary.scalar('loss', rnn.loss)
+            acc_summary = tf.summary.scalar('accuracy', rnn.accuracy)
 
-        # train summary
-        train_summary_op = tf.summary.merge([loss_summary, acc_summary, grad_summaries_merged])
-        train_summary_dir = os.path.join(outdir, 'summaries', 'train')
-        train_summary_writer = tf.summary.FileWriter(train_summary_dir, sess.graph)
+            # train summary
+            train_summary_op = tf.summary.merge([loss_summary, acc_summary, grad_summaries_merged])
+            train_summary_dir = os.path.join(outdir, 'summaries', 'train')
+            train_summary_writer = tf.summary.FileWriter(train_summary_dir, sess.graph)
 
-        # dev summary
-        dev_summary_op = tf.summary.merge([loss_summary, acc_summary])
-        dev_summary_dir = os.path.join(outdir, 'summaries', 'dev')
-        dev_summary_writer = tf.summary.FileWriter(dev_summary_dir, sess.graph)
+            # dev summary
+            dev_summary_op = tf.summary.merge([loss_summary, acc_summary])
+            dev_summary_dir = os.path.join(outdir, 'summaries', 'dev')
+            dev_summary_writer = tf.summary.FileWriter(dev_summary_dir, sess.graph)
 
-        # checkpoint dirctory
-        checkpoint_dir = os.path.abspath(os.path.join(outdir, 'checkpoints'))
-        checkpoint_prefix = os.path.join(checkpoint_dir, 'model')
+            # checkpoint dirctory
+            checkpoint_dir = os.path.abspath(os.path.join(outdir, 'checkpoints'))
+            checkpoint_prefix = os.path.join(checkpoint_dir, 'model')
 
-        if not os.path.exists(checkpoint_dir):
-            os.mkdir(checkpoint_dir)
+            if not os.path.exists(checkpoint_dir):
+                os.mkdir(checkpoint_dir)
 
-        saver = tf.train.Saver(tf.global_variables(), max_to_keep=config['num_checkpoints'])
+            saver = tf.train.Saver(tf.global_variables(), max_to_keep=config['num_checkpoints'])
 
-        sess.run(tf.global_variables_initializer())
+            # sess.run(tf.global_variables_initializer())
+            sess.run(tf.global_variables_initializer())
 
-        def train_step(x_batch, y_batch):
-            feed_dict = {
-                rnn.input_x: x_batch,
-                rnn.input_y: y_batch,
-                rnn.dropout_keep_prob: config['dropout_keep_prob']
-            }
+            def train_step(x_batch, y_batch):
+                feed_dict = {
+                    rnn.input_x: x_batch,
+                    rnn.input_y: y_batch,
+                    rnn.dropout_keep_prob: config['dropout_keep_prob']
+                }
 
-            _, step, summaries, loss, accuracy = sess.run(
-                [train_op, global_step, train_summary_op, rnn.loss, rnn.accuracy],
-                feed_dict=feed_dict
-            )
+                _, step, summaries, loss, accuracy = sess.run(
+                    [train_op, global_step, train_summary_op, rnn.loss, rnn.accuracy],
+                    feed_dict=feed_dict
+                )
 
-            time_str = datetime.datetime.now().isoformat()
-            print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
-            train_summary_writer.add_summary(summaries, step)
+                time_str = datetime.datetime.now().isoformat()
+                print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
+                train_summary_writer.add_summary(summaries, step)
 
-        def dev_step(x_batch, y_batch, writer=None):
-            feed_dic = {
-                rnn.input_x: x_batch,
-                rnn.input_y: y_batch,
-                rnn.dropout_keep_prob: 1.0
-            }
+            def dev_step(x_batch, y_batch, writer=None):
+                feed_dic = {
+                    rnn.input_x: x_batch,
+                    rnn.input_y: y_batch,
+                    rnn.dropout_keep_prob: 1.0
+                }
 
-            step, summaries, loss, accuracy = sess.run(
-                [global_step, dev_summary_op, rnn.loss, rnn.accuracy],
-                feed_dict=feed_dic
-            )
+                step, summaries, loss, accuracy = sess.run(
+                    [global_step, dev_summary_op, rnn.loss, rnn.accuracy],
+                    feed_dict=feed_dic
+                )
 
-            time_str = datetime.datetime.now().isoformat()
-            print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
-            if writer:
-                writer.add_summary(summaries, step)
+                time_str = datetime.datetime.now().isoformat()
+                print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
+                if writer:
+                    writer.add_summary(summaries, step)
 
-        # generate batches
-        batches = data_helper.generate_batchs(x_train, y_train, config)
-        for batch in batches:
-            x_batch, y_batch = zip(*batch)
-            train_step(x_batch, y_batch)
-            current_step = tf.train.global_step(sess, global_step)
-            if current_step % config['evaluate_every'] == 0:
-                print('Evaluation:')
-                dev_step(x_dev, y_dev, writer=dev_summary_writer)
+            # generate batches
+            batches = data_helper.generate_batchs(x_train, y_train, config)
+            for batch in batches:
+                x_batch, y_batch = zip(*batch)
+                train_step(x_batch, y_batch)
+                current_step = tf.train.global_step(sess, global_step)
+                if current_step % config['evaluate_every'] == 0:
+                    print('Evaluation:')
+                    dev_step(x_dev, y_dev, writer=dev_summary_writer)
 
-            if current_step % config['checkpoint_every'] == 0:
-                path = saver.save(sess, checkpoint_prefix, global_step=current_step)
-                print('save model checkpoint to {}'.format(path))
+                if current_step % config['checkpoint_every'] == 0:
+                    path = saver.save(sess, checkpoint_prefix, global_step=current_step)
+                    print('save model checkpoint to {}'.format(path))
 
-        # test accuracy
-        test_accuracy = sess.run([rnn.accuracy], feed_dict={
-            rnn.input_x: x_test, rnn.input_y: y_test, rnn.dropout_keep_prob: 1.0})
-        print('Test dataset accuracy: {}'.format(test_accuracy))
+            # test accuracy
+            test_accuracy = sess.run([rnn.accuracy], feed_dict={
+                rnn.input_x: x_test, rnn.input_y: y_test, rnn.dropout_keep_prob: 1.0})
+            print('Test dataset accuracy: {}'.format(test_accuracy))
 
 
 if __name__ == '__main__':

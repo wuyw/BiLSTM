@@ -7,7 +7,6 @@ import json
 import numpy as np
 import re
 
-
 def process_data(config):
     """
     文本格式
@@ -21,6 +20,8 @@ def process_data(config):
     with open(data_path, 'r', encoding='utf-8') as f:
         for line in f:
             lis = line.strip().split('\t')
+            if len(lis) != 2:
+                continue
             X.append(re.sub('\s+', '', lis[1])[:sequence_length])
             y.append(lis[0])
     return X, y
@@ -126,4 +127,4 @@ def load_json(json_file_path):
 
 
 if __name__ == '__main__':
-    generate_vocab(['abcd', 'dbgj'], [1, 0], config)
+    print(generate_vocab(['abcd', 'dbgj'], [1, 0], config))
