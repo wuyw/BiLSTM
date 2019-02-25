@@ -42,5 +42,5 @@ class Predict():
 
 if __name__ == '__main__':
     prediction = Predict(config)
-    result = prediction.predict(["我以前的互助怎么查不到", "升级后等待期又从升级的时候开始算吗", "会员50周岁以后呢", "我已满50周岁是否能参加"])
+    result = prediction.predict(["参加"])
     print(result)
