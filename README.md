@@ -1,4 +1,5 @@
 # 基于字向量TextRNN文本分类
+# TODO 基于词向量的TextRNN文本分类
 
 # 目录说明
 <pre>
